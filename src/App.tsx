@@ -185,6 +185,24 @@ export default function App() {
     }
   };
 
+  const disconnect = async () => {
+    if (window.ethereum) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_revokePermissions",
+          params: [{ eth_accounts: {} }]
+        });
+      } catch {
+        // Some wallets do not expose permission revocation; clear this app's connection state.
+      }
+    }
+    setAccount("");
+    setWalletChain(null);
+    setBalance("—");
+    setBalanceError("");
+    setNotice("Wallet disconnected from this app.");
+  };
+
   const verifyDeployment = async () => {
     setRuntimeBusy(true); setRuntimeVerified(false); setRuntimeError("");
     try {
@@ -385,7 +403,7 @@ export default function App() {
       <header>
         <a className="brand" href="#"><span className="logo">A</span><span>AMMORA<span className="muted"> / LAUNCHHUB</span></span></a>
         <nav><a href="#launch">Launch</a><a href="#markets">My launches</a><a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">SDK docs ↗</a></nav>
-        <button className="wallet" onClick={connect}>{account ? short(account) : "Connect wallet"}</button>
+        <div className="wallet-group"><button className="wallet" onClick={connect}>{account ? short(account) : "Connect wallet"}</button>{account && <button className="wallet-disconnect" onClick={() => void disconnect()} title="Disconnect wallet">Disconnect</button>}</div>
       </header>
 
       <main>
