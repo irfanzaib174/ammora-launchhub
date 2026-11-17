@@ -287,7 +287,7 @@ export default function App() {
     setBusy(true);
     try {
       const currentBlock = await resolveAmmoraFinalizedHead([publicClient], giwaSepoliaAutoRoute.finality);
-      await verifyAmmoraDeploymentRuntime(publicClient, DEPLOYMENT, currentBlock, runtimePinSnapshot.deployments["auto-route"].runtimeCodeHashes);
+      await verifyAmmoraDeploymentRuntime(publicClient, DEPLOYMENT, currentBlock, runtimePinSnapshot.deployments["auto-route"].runtimeCodeHashes as Record<string, Hex>);
       const contracts = DEPLOYMENT.contracts.launch;
       await verifyAmmoraV4CoreAtBlock(publicClient, {
         configRegistry: contracts.configRegistry,
