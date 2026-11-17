@@ -4,6 +4,7 @@ import {
   type Address, type Hex
 } from "viem";
 import {
+  AmmoraDataApiClient,
   buildCreateAmmoraV4Launch,
   getAmmoraV4ConfigAtBlock,
   giwaSepoliaAutoRouteDeployment,
@@ -28,6 +29,7 @@ const chain = defineChain({
 });
 const publicClient = createPublicClient({ chain, transport: http(RPC_URL, { retryCount: 1 }) });
 const STORAGE_KEY = "ammora-launchhub:v2";
+const DATA_API_URL = "https://ammora-giwa-sepolia-data.fly.dev";
 declare global {
   interface Window { ethereum?: any }
 }
@@ -82,6 +84,10 @@ export default function App() {
   const [runtimeVerified, setRuntimeVerified] = useState(false);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [runtimeError, setRuntimeError] = useState("");
+  const [liveLaunches, setLiveLaunches] = useState<Record<string, unknown>[]>([]);
+  const [liveBusy, setLiveBusy] = useState(false);
+  const [liveError, setLiveError] = useState("");
+  const [liveLoaded, setLiveLoaded] = useState(false);
 
   const walletReady = Boolean(account && walletChain === CHAIN_ID);
 
@@ -391,6 +397,40 @@ export default function App() {
     }
   };
 
+  const loadLiveLaunches = async () => {
+    setLiveBusy(true);
+    setLiveError("");
+    try {
+      const data = new AmmoraDataApiClient(DATA_API_URL);
+      const response: unknown = await data.getLaunches({ chainId: BigInt(CHAIN_ID) });
+      let records: unknown[] = [];
+      if (Array.isArray(response)) records = response;
+      else if (response && typeof response === "object") {
+        const object = response as Record<string, unknown>;
+        for (const key of ["launches", "items", "results", "data"]) {
+          if (Array.isArray(object[key])) { records = object[key] as unknown[]; break; }
+        }
+      }
+      setLiveLaunches(records.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))));
+      setLiveLoaded(true);
+      if (records.length === 0) setLiveError("The Data API returned no indexed launches for GIWA Sepolia yet.");
+    } catch (error) {
+      setLiveError(getError(error));
+      setLiveLoaded(true);
+    } finally {
+      setLiveBusy(false);
+    }
+  };
+
+  const liveField = (item: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = item[key];
+      if (typeof value === "string" && value.trim()) return value;
+      if (typeof value === "number") return String(value);
+    }
+    return "";
+  };
+
   const removeDraft = (id: string) => {
     setTokens(current => current.filter(item => item.id !== id));
     setNotice("Launch record removed from this browser only.");
@@ -402,7 +442,7 @@ export default function App() {
     <div className="app">
       <header>
         <a className="brand" href="#"><span className="logo">A</span><span>AMMORA<span className="muted"> / LAUNCHHUB</span></span></a>
-        <nav><a href="#launch">Launch</a><a href="#markets">My launches</a><a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">SDK docs ↗</a></nav>
+        <nav><a href="#launch">Launch</a><a href="#live-launches">Live launches</a><a href="#markets">My launches</a><a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">SDK docs ↗</a></nav>
         <div className="wallet-group"><button className="wallet" onClick={connect}>{account ? short(account) : "Connect wallet"}</button>{account && <button className="wallet-disconnect" onClick={() => void disconnect()} title="Disconnect wallet">Disconnect</button>}</div>
       </header>
 
@@ -459,8 +499,32 @@ export default function App() {
           </div>
         </section>
 
+        <section className="workspace" id="live-launches">
+          <div className="section-head"><div><div className="eyebrow">03 / LIVE ECOSYSTEM</div><h2>Live GIWA launches</h2><p>Discover indexed launches from Ammora's official GIWA Sepolia Data API.</p></div><button className="secondary-button" disabled={liveBusy} onClick={() => void loadLiveLaunches()}>{liveBusy ? "Loading launches…" : liveLoaded ? "Refresh launches" : "Load live launches"}</button></div>
+          {liveError && <div className="panel"><p className={liveLaunches.length ? "draft" : "error"}>{liveError}</p></div>}
+          {liveLaunches.length > 0 && <div className="token-list">
+            {liveLaunches.map((item, index) => {
+              const title = liveField(item, ["name", "tokenName", "projectName"]) || "Indexed launch";
+              const ticker = liveField(item, ["symbol", "tokenSymbol", "ticker"]);
+              const address = liveField(item, ["tokenAddress", "token", "address"]);
+              const creator = liveField(item, ["creator", "owner", "deployer"]);
+              const created = liveField(item, ["createdAt", "timestamp", "blockNumber"]);
+              return <div className="token" key={address || String(index)}>
+                <div className="token-icon">{(ticker || title).slice(0, 1).toUpperCase()}</div>
+                <div className="token-info"><strong>{title} {ticker && <small>${ticker}</small>}</strong>
+                  {address && <p><small>Token: </small><code>{address}</code></p>}
+                  {creator && <p><small>Creator: </small><code>{creator}</code></p>}
+                  {created && <p><small>Indexed data: </small><code>{created}</code></p>}
+                </div>
+                <span className="good">INDEXED</span>
+              </div>;
+            })}
+          </div>}
+          {!liveLoaded && <div className="empty"><div className="empty-icon">⌁</div><strong>Explore the live ecosystem</strong><p>Load launches to query the Ammora Data API. This is read-only and does not require a wallet transaction.</p></div>}
+        </section>
+
         <section className="workspace" id="markets">
-          <div className="section-head"><div><div className="eyebrow">03 / YOUR PROJECTS</div><h2>Launch workspace</h2><p>Saved locally and reconciled on-chain launches.</p></div><span className="count">{tokens.length.toString().padStart(2, "0")} ITEMS · {deployedCount} DEPLOYED</span></div>
+          <div className="section-head"><div><div className="eyebrow">04 / YOUR PROJECTS</div><h2>Launch workspace</h2><p>Saved locally and reconciled on-chain launches.</p></div><span className="count">{tokens.length.toString().padStart(2, "0")} ITEMS · {deployedCount} DEPLOYED</span></div>
           {tokens.length === 0 ? <div className="empty"><div className="empty-icon">◇</div><strong>No launches yet</strong><p>Your saved token drafts will appear here.</p></div> : <div className="token-list">
             {tokens.map(item => <div className="token" key={item.id}>
               <div className="token-icon">{item.symbol.slice(0, 1)}</div>
@@ -477,7 +541,7 @@ export default function App() {
         <section className="notice">
           <div className="notice-icon">i</div>
           <div><strong>Transaction safety & important limits</strong>
-            <p>The app uses the official SDK deployment catalog, reads the selected Config, verifies the V4 core addresses, simulates the launch call, asks your wallet to sign, waits for 13 confirmations and checks the receipt, Config hash, token code and curve code. Never share your seed phrase or private key.</p>
+            <p>The app uses the official SDK deployment catalog, discovers indexed launches through AmmoraDataApiClient, reads the selected Config, verifies the V4 core addresses, simulates the launch call, asks your wallet to sign, waits for 13 confirmations and checks the receipt, Config hash, token code and curve code. Never share your seed phrase or private key.</p>
             <p><b>Important:</b> Config #6 is a documented template, not a personal launchpad Config. Its fee recipient is fixed by that Config. For a platform-owned Config, first create a new immutable Config with reviewed recipients and economics. The browser flow here does not create a new Config. Runtime-bytecode pin verification is available above. Run “Verify official deployment” first; token issuance stays locked until that check and an enabled Config review both pass.</p>
             <a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">Official launchpad guide ↗</a>
           </div>
