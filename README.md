@@ -1,49 +1,42 @@
-# Ammora LaunchHub
+# Ammora LaunchHub — upgraded starter
 
-A community-built launchpad starter for **GIWA Sepolia (chain ID 91342)** using the official `@ammora-protocol/sdk` dependency (pinned to 0.3.9).
+Community-built testnet launchpad for **GIWA Sepolia (chain ID 91342)** using `@ammora-protocol/sdk@0.3.9`.
 
-## Run locally
+## Improvements
 
-Requirements: Node.js 22 or 24.
+- Correct GIWA Sepolia chain ID switch (`0x1652e`).
+- Uses the SDK deployment catalog RPC rather than the old hard-coded RPC URL.
+- Reads native ETH balance from the GIWA public RPC.
+- Saves launch drafts and verified launch records in browser `localStorage`.
+- Reads an enabled V4 Config using SDK `getAmmoraV4ConfigAtBlock`.
+- Checks the selected chain and V4 core contract addresses.
+- Builds the launch transaction using `buildCreateAmmoraV4Launch`.
+- Simulates before asking the connected wallet to sign.
+- Waits for 13 confirmations and reconciles Config hash, token code and curve code.
+- Never stores private keys.
+
+## Install and build
+
+Requires Node.js 22 or 24.
 
 ```bash
 npm install
+npm run build
 npm run dev
 ```
 
-Build:
+## Important deployment and Config limitations
 
-```bash
-npm run build
-npm run preview
-```
+This is a **testnet starter**, not an official Ammora product.
 
-## Current functionality
+- The app currently uses an existing Config ID supplied in the UI (default `6`, the documented example template). The Config's immutable fee claimer is not automatically changed to the connected wallet.
+- To operate your own launchpad economics and fee recipients, create and review a new immutable Config from a suitable template using the official SDK workflow before issuing tokens. This frontend does not yet implement the full Config-authoring form.
+- The frontend verifies the SDK catalog chain and V4 core addresses and contains the SDK launch transaction/simulation/receipt flow, but **does not yet perform the full SDK runtime-bytecode pin verification** described by Ammora's deployment guide. For safety, the Issue Token button is intentionally locked until the official GIWA auto-route runtime-pin snapshot is added and verified. Do not use real funds or production mainnet.
+- The metadata URI is a placeholder URL. Before public token issuance, replace it with a real, immutable token metadata URI (for example, a properly hosted JSON file).
+- Browser localStorage is device/browser-specific. It is not cloud backup. Clearing browser data removes saved drafts; deployed tokens remain on-chain and can be recovered from transaction receipts.
 
-- Responsive launchpad UI
-- MetaMask / Rabby injected-wallet connection
-- Prompts wallet to switch to GIWA Sepolia
-- Reads connected wallet's native balance
-- Saves token launch drafts locally in page state
-- Links to official Ammora SDK docs
+## Official references
 
-## Important: draft vs on-chain launch
-
-This starter deliberately does **not** claim that a saved draft is a deployed token. The official launch flow requires a reviewed Config, live deployment verification, current chain state, SDK-generated transaction plans, simulation, explicit wallet approval, and receipt reconciliation. The official guide describes Config creation, token issuance, ALC curve trading, graduation and post-graduation liquidity.
-
-Before enabling issuance:
-1. Read https://docs.ammora.org/guides/launchpad and https://docs.ammora.org/guides/sdk-quickstart
-2. Verify GIWA Sepolia deployment generation `auto-route`, chain ID 91342 and current runtime pins.
-3. Implement Config selection/preview and obtain actual Config ID/hash from chain.
-4. Use official SDK 0.3.9 launch builders/clients and a connected wallet; never put private keys in frontend code.
-5. Simulate and display recipients, approvals, amounts and deadlines before the user signs.
-6. Verify successful canonical receipts and store actual token/curve addresses.
-
-No real funds or production mainnet are supported by this starter. The SDK is testnet software; review its current security and deployment status before use.
-
-## Deploy to GitHub Pages
-
-1. Create a GitHub repository and upload this project.
-2. In repository Settings → Pages, choose GitHub Actions.
-3. Add a workflow that installs dependencies, runs `npm run build`, and publishes `dist/`.
-4. The Vite `base: './'` setting supports a project subpath.
+- https://docs.ammora.org/guides/sdk-quickstart
+- https://docs.ammora.org/guides/launchpad
+- https://docs.ammora.org/examples
