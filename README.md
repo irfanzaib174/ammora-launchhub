@@ -31,7 +31,7 @@ This is a **testnet starter**, not an official Ammora product.
 
 - The app currently uses an existing Config ID supplied in the UI (default `6`, the documented example template). The Config's immutable fee claimer is not automatically changed to the connected wallet.
 - To operate your own launchpad economics and fee recipients, create and review a new immutable Config from a suitable template using the official SDK workflow before issuing tokens. This frontend does not yet implement the full Config-authoring form.
-- The frontend verifies the SDK catalog chain and V4 core addresses and contains the SDK launch transaction/simulation/receipt flow, but **does not yet perform the full SDK runtime-bytecode pin verification** described by Ammora's deployment guide. For safety, the Issue Token button is intentionally locked until the official GIWA auto-route runtime-pin snapshot is added and verified. Do not use real funds or production mainnet.
+- The frontend bundles the reviewed GIWA auto-route runtime-pin snapshot from Ammora's public examples and checks its identity against the SDK deployment. Before issuance it verifies runtime hashes at a finalized block, then verifies V4 core addresses. If any check fails, issuance stays locked. Do not use real funds or production mainnet.
 - The metadata URI is a placeholder URL. Before public token issuance, replace it with a real, immutable token metadata URI (for example, a properly hosted JSON file).
 - Browser localStorage is device/browser-specific. It is not cloud backup. Clearing browser data removes saved drafts; deployed tokens remain on-chain and can be recovered from transaction receipts.
 
