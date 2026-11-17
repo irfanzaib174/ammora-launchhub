@@ -8,15 +8,18 @@ import {
   getAmmoraV4ConfigAtBlock,
   giwaSepoliaAutoRouteDeployment,
   parseAmmoraV4LaunchCreatedReceipt,
-  verifyAmmoraV4CoreAtBlock
+  verifyAmmoraV4CoreAtBlock,
+  verifyAmmoraDeploymentRuntime,
+  resolveAmmoraFinalizedHead,
+  giwaSepoliaAutoRoute
 } from "@ammora-protocol/sdk";
+import runtimePinSnapshot from "./runtime-pins.giwa.json";
 import "./style.css";
 
 const CHAIN_ID = 91342;
 const CHAIN_HEX = "0x1652e";
 const DEPLOYMENT = giwaSepoliaAutoRouteDeployment;
 const RPC_URL = DEPLOYMENT.chain.rpcUrls[0];
-const RUNTIME_PIN_VERIFICATION_ENABLED = false; // Enable only after adding and verifying the official GIWA auto-route runtime-pin snapshot.
 const chain = defineChain({
   id: CHAIN_ID,
   name: "GIWA Sepolia",
@@ -76,6 +79,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [configError, setConfigError] = useState("");
   const [deploymentStatus, setDeploymentStatus] = useState("SDK catalog loaded · GIWA Sepolia auto-route V4");
+  const [runtimeVerified, setRuntimeVerified] = useState(false);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
+  const [runtimeError, setRuntimeError] = useState("");
 
   const walletReady = Boolean(account && walletChain === CHAIN_ID);
 
@@ -179,6 +185,21 @@ export default function App() {
     }
   };
 
+  const verifyDeployment = async () => {
+    setRuntimeBusy(true); setRuntimeVerified(false); setRuntimeError("");
+    try {
+      const snapshot = runtimePinSnapshot as unknown as { schemaVersion: number; chainId: string; deployments: Record<string, { slot: string; sourceCommit: string; runtimeCodeHashes: Record<string, Hex> }> };
+      const profile = snapshot.deployments["auto-route"];
+      if (snapshot.schemaVersion !== 1 || snapshot.chainId !== String(DEPLOYMENT.chain.id) || !profile || profile.slot !== DEPLOYMENT.slot || profile.sourceCommit !== DEPLOYMENT.sourceCommit) throw new Error("Reviewed runtime-pin snapshot does not match this SDK deployment.");
+      const blockNumber = await resolveAmmoraFinalizedHead([publicClient], giwaSepoliaAutoRoute.finality);
+      const result = await verifyAmmoraDeploymentRuntime(publicClient, DEPLOYMENT, blockNumber, profile.runtimeCodeHashes);
+      await verifyAmmoraV4CoreAtBlock(publicClient, { configRegistry: DEPLOYMENT.contracts.launch.configRegistry, launchFactory: DEPLOYMENT.contracts.launch.factory, graduationAdapter: DEPLOYMENT.contracts.launch.graduationAdapter, feePolicy: DEPLOYMENT.contracts.launch.feePolicy }, blockNumber);
+      setRuntimeVerified(true); setDeploymentStatus("Runtime verified · " + result.contracts.length + " contracts · finalized block " + blockNumber);
+      setNotice("Official GIWA runtime pins and V4 core contracts verified at a finalized block."); return blockNumber;
+    } catch (error) { setRuntimeVerified(false); setRuntimeError(getError(error)); throw error; }
+    finally { setRuntimeBusy(false); }
+  };
+
   const checkConfig = async () => {
     setConfigBusy(true);
     setConfig(null);
@@ -257,6 +278,7 @@ export default function App() {
       setNotice("Switch to GIWA Sepolia before issuing.");
       return;
     }
+    if (!runtimeVerified) { setNotice("Verify the official GIWA runtime pins before issuing."); return; }
     if (!config || !config.enabled || config.id !== configId.trim()) {
       setNotice("Read and verify an enabled Config before issuing.");
       return;
@@ -264,7 +286,8 @@ export default function App() {
     if (busy) return;
     setBusy(true);
     try {
-      const currentBlock = await publicClient.getBlockNumber();
+      const currentBlock = await resolveAmmoraFinalizedHead([publicClient], giwaSepoliaAutoRoute.finality);
+      await verifyAmmoraDeploymentRuntime(publicClient, DEPLOYMENT, currentBlock, runtimePinSnapshot.deployments["auto-route"].runtimeCodeHashes);
       const contracts = DEPLOYMENT.contracts.launch;
       await verifyAmmoraV4CoreAtBlock(publicClient, {
         configRegistry: contracts.configRegistry,
@@ -399,6 +422,10 @@ export default function App() {
         <section className="workspace">
           <div className="section-head"><div><div className="eyebrow">02 / CONFIG REVIEW</div><h2>Ammora launch Config</h2><p>Read an enabled GIWA Sepolia Config before token issuance.</p></div><span className="count">CHAIN {CHAIN_ID}</span></div>
           <div className="panel config-panel">
+            <div className="config-top"><strong>Deployment security check</strong><span className={runtimeVerified ? "good" : "draft"}>{runtimeVerified ? "VERIFIED" : "NOT VERIFIED"}</span></div>
+            <p className="lead">{deploymentStatus}</p>
+            <button className="secondary-button" disabled={runtimeBusy} onClick={() => void verifyDeployment().catch(error => setNotice(getError(error)))}>{runtimeBusy ? "Verifying official runtime pins…" : runtimeVerified ? "Re-verify deployment" : "Verify official deployment"}</button>
+            {runtimeError && <p className="error">{runtimeError}</p>}
             <label>Config ID<input value={configId} onChange={event => { setConfigId(event.target.value); setConfig(null); setConfigError(""); }} inputMode="numeric" placeholder="e.g. 6"/></label>
             <button className="secondary-button" disabled={configBusy} onClick={checkConfig}>{configBusy ? "Checking…" : "Read & verify Config"}</button>
             {configError && <p className="error">{configError}</p>}
@@ -424,7 +451,7 @@ export default function App() {
                 {item.curve && <p><small>Curve: </small><code>{item.curve}</code></p>}
                 {item.txHash && <p><small>Tx: </small><a href={`https://sepolia-explorer.giwa.io/tx/${item.txHash}`} target="_blank" rel="noreferrer">View transaction ↗</a></p>}
               </div>
-              <div className="token-actions"><span className={item.status === "Deployed" ? "good" : "draft"}>{item.status}</span>{item.status !== "Deployed" && <button disabled={busy || !walletReady || !config?.enabled || !RUNTIME_PIN_VERIFICATION_ENABLED} onClick={() => issueToken(item)}>{busy ? "Working…" : RUNTIME_PIN_VERIFICATION_ENABLED ? "Issue token" : "Issuance locked · security check pending"}</button>}<button className="remove" onClick={() => removeDraft(item.id)}>Remove</button></div>
+              <div className="token-actions"><span className={item.status === "Deployed" ? "good" : "draft"}>{item.status}</span>{item.status !== "Deployed" && <button disabled={busy || !walletReady || !config?.enabled || !runtimeVerified} onClick={() => issueToken(item)}>{busy ? "Working…" : runtimeVerified ? "Issue token" : "Verify deployment to unlock"}</button>}<button className="remove" onClick={() => removeDraft(item.id)}>Remove</button></div>
             </div>)}
           </div>}
         </section>
