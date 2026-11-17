@@ -460,7 +460,7 @@ export default function App() {
           <div className="notice-icon">i</div>
           <div><strong>Transaction safety & important limits</strong>
             <p>The app uses the official SDK deployment catalog, reads the selected Config, verifies the V4 core addresses, simulates the launch call, asks your wallet to sign, waits for 13 confirmations and checks the receipt, Config hash, token code and curve code. Never share your seed phrase or private key.</p>
-            <p><b>Important:</b> Config #6 is a documented template, not a personal launchpad Config. Its fee recipient is fixed by that Config. For a platform-owned Config, first create a new immutable Config with reviewed recipients and economics. The browser flow here does not create a new Config. Runtime-bytecode pin verification is not yet included; the Issue Token control is intentionally locked until the official GIWA auto-route runtime-pin snapshot is added and verified.</p>
+            <p><b>Important:</b> Config #6 is a documented template, not a personal launchpad Config. Its fee recipient is fixed by that Config. For a platform-owned Config, first create a new immutable Config with reviewed recipients and economics. The browser flow here does not create a new Config. Runtime-bytecode pin verification is available above. Run “Verify official deployment” first; token issuance stays locked until that check and an enabled Config review both pass.</p>
             <a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">Official launchpad guide ↗</a>
           </div>
         </section>
