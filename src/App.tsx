@@ -63,6 +63,30 @@ function short(value: string) {
 function getError(error: unknown) {
   return error instanceof Error ? error.message : "An unexpected error occurred.";
 }
+function liveField(item: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number") return String(value);
+  }
+  return "";
+}
+function toPublicUrl(value: string) {
+  const uri = value.trim();
+  if (uri.startsWith("ipfs://")) return "https://ipfs.io/ipfs/" + uri.slice(7).replace(/^ipfs\//, "");
+  if (uri.startsWith("ar://")) return "https://arweave.net/" + uri.slice(5);
+  return uri;
+}
+async function readTokenImage(metadataUri: string): Promise<string> {
+  const response = await fetch(toPublicUrl(metadataUri), { headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error("Metadata request failed");
+  const metadata: unknown = await response.json();
+  if (!metadata || typeof metadata !== "object") throw new Error("Invalid metadata JSON");
+  const record = metadata as Record<string, unknown>;
+  const image = [record.image, record.image_url, record.imageUrl, record.logo, record.logoURI]
+    .find((value): value is string => typeof value === "string" && Boolean(value.trim()));
+  return image ? toPublicUrl(image) : "";
+}
 
 export default function App() {
   const [account, setAccount] = useState<Address | "">("");
@@ -88,6 +112,7 @@ export default function App() {
   const [liveBusy, setLiveBusy] = useState(false);
   const [liveError, setLiveError] = useState("");
   const [liveLoaded, setLiveLoaded] = useState(false);
+  const [tokenImages, setTokenImages] = useState<Record<string, string>>({});
 
   const walletReady = Boolean(account && walletChain === CHAIN_ID);
 
@@ -107,6 +132,22 @@ export default function App() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens)); }
     catch { setNotice("Browser storage is full; export your launch records before clearing browser data."); }
   }, [tokens]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const sources = [
+      ...tokens.map(item => item.metadataURI),
+      ...liveLaunches.map(item => liveField(item, ["metadataURI", "metadataUri", "tokenURI", "tokenUri", "uri"]))
+    ].filter((value): value is string => Boolean(value && /^(https:\/\/|ipfs:\/\/|ar:\/\/)/i.test(value)));
+    const unique = [...new Set(sources)];
+    void Promise.all(unique.map(async uri => {
+      try { return [uri, await readTokenImage(uri)] as const; }
+      catch { return [uri, ""] as const; }
+    })).then(entries => {
+      if (!cancelled) setTokenImages(current => ({ ...current, ...Object.fromEntries(entries.filter(([, image]) => image)) }));
+    });
+    return () => { cancelled = true; };
+  }, [tokens, liveLaunches]);
 
   const refreshWallet = useCallback(async () => {
     if (!window.ethereum) return;
@@ -422,15 +463,6 @@ export default function App() {
     }
   };
 
-  const liveField = (item: Record<string, unknown>, keys: string[]) => {
-    for (const key of keys) {
-      const value = item[key];
-      if (typeof value === "string" && value.trim()) return value;
-      if (typeof value === "number") return String(value);
-    }
-    return "";
-  };
-
   const removeDraft = (id: string) => {
     setTokens(current => current.filter(item => item.id !== id));
     setNotice("Launch record removed from this browser only.");
@@ -471,7 +503,7 @@ export default function App() {
                 <label>Token symbol<input value={symbol} onChange={event => setSymbol(event.target.value)} placeholder="e.g. AMORA" required maxLength={10}/></label>
               </div>
               <label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="What is your project about?" rows={3} maxLength={240}/></label>
-              <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /></label>
+              <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /><small className="field-help">The public JSON must contain an image field, for example: {"name":"My Token","image":"ipfs://.../logo.png"}.</small></label>
               <div className="form-bottom"><span>Drafts are saved in this browser. Saving a draft does not deploy a token.</span><button className="primary" type="submit">Save launch draft <span>→</span></button></div>
             </form>
           </div>
@@ -510,7 +542,7 @@ export default function App() {
               const creator = liveField(item, ["creator", "owner", "deployer"]);
               const created = liveField(item, ["createdAt", "timestamp", "blockNumber"]);
               return <div className="token" key={address || String(index)}>
-                <div className="token-icon">{(ticker || title).slice(0, 1).toUpperCase()}</div>
+                <div className="token-icon">{(() => { const uri = liveField(item, ["metadataURI", "metadataUri", "tokenURI", "tokenUri", "uri"]); const image = uri ? tokenImages[uri] : ""; return image ? <img src={image} alt={`${title} logo`} loading="lazy" /> : (ticker || title).slice(0, 1).toUpperCase(); })()}</div>
                 <div className="token-info"><strong>{title} {ticker && <small>${ticker}</small>}</strong>
                   {address && <p><small>Token: </small><code>{address}</code></p>}
                   {creator && <p><small>Creator: </small><code>{creator}</code></p>}
@@ -527,7 +559,7 @@ export default function App() {
           <div className="section-head"><div><div className="eyebrow">04 / YOUR PROJECTS</div><h2>Launch workspace</h2><p>Saved locally and reconciled on-chain launches.</p></div><span className="count">{tokens.length.toString().padStart(2, "0")} ITEMS · {deployedCount} DEPLOYED</span></div>
           {tokens.length === 0 ? <div className="empty"><div className="empty-icon">◇</div><strong>No launches yet</strong><p>Your saved token drafts will appear here.</p></div> : <div className="token-list">
             {tokens.map(item => <div className="token" key={item.id}>
-              <div className="token-icon">{item.symbol.slice(0, 1)}</div>
+              <div className="token-icon">{tokenImages[item.metadataURI] ? <img src={tokenImages[item.metadataURI]} alt={`${item.name} logo`} loading="lazy" /> : item.symbol.slice(0, 1)}</div>
               <div className="token-info"><strong>{item.name} <small>${item.symbol}</small></strong><p>{item.description || "No description added"}</p><code>{item.creator}</code>
                 {item.token && <p><small>Token: </small><code>{item.token}</code></p>}
                 {item.curve && <p><small>Curve: </small><code>{item.curve}</code></p>}
