@@ -49,7 +49,6 @@ type LaunchItem = {
   description: string;
   metadataURI: string;
   imageDataUrl?: string;
-  imageIsPdf?: boolean;
   creator: string;
   status: "Draft · not deployed" | "Deployed";
   configId?: string;
@@ -109,7 +108,6 @@ export default function App() {
   const [description, setDescription] = useState("");
   const [metadataURI, setMetadataURI] = useState("");
   const [logoPreview, setLogoPreview] = useState("");
-  const [logoIsPdf, setLogoIsPdf] = useState(false);
   const [configId, setConfigId] = useState("");
   const [config, setConfig] = useState<ConfigSummary | null>(null);
   const [configBusy, setConfigBusy] = useState(false);
@@ -409,7 +407,6 @@ export default function App() {
       description: description.trim(),
       metadataURI: metadataURI.trim(),
       imageDataUrl: logoPreview,
-      imageIsPdf: logoIsPdf,
       creator: account || "Wallet not connected",
       status: "Draft · not deployed",
       createdAt: Date.now()
@@ -420,7 +417,6 @@ export default function App() {
     setDescription("");
     setMetadataURI("");
     setLogoPreview("");
-    setLogoIsPdf(false);
     setNotice("Draft saved in this browser. No blockchain transaction was sent.");
   };
 
@@ -633,23 +629,22 @@ export default function App() {
               </div>
               <label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="What is your project about?" rows={3} maxLength={240}/></label>
               <div className="logo-upload-row">
-                <div className="logo-upload-preview">{logoPreview ? (logoIsPdf ? <span className="pdf-file-mark">PDF</span> : <img src={logoPreview} alt="Token logo preview" />) : <span>+</span>}</div>
+                <div className="logo-upload-preview">{logoPreview ? <img src={logoPreview} alt="Token logo preview" /> : <span>+</span>}</div>
                 <div className="logo-upload-controls">
                   <label className="logo-upload-label">Token image
-                    <input className="logo-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.jpg,.jpeg" onChange={event => {
+                    <input className="logo-file-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" onChange={event => {
                       const file = event.target.files?.[0];
                       if (!file) return;
-                      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-                      if (!isPdf && !file.type.startsWith("image/")) { setNotice("Choose a PDF or image file."); event.target.value = ""; return; }
+                      if (!["image/jpeg", "image/png"].includes(file.type) && !/\.(jpe?g|png)$/i.test(file.name)) { setNotice("Choose a JPG, JPEG or PNG image."); event.target.value = ""; return; }
                       if (file.size > 2 * 1024 * 1024) { setNotice("File must be 2 MB or smaller."); event.target.value = ""; return; }
                       const reader = new FileReader();
-                      reader.onload = () => { setLogoPreview(typeof reader.result === "string" ? reader.result : ""); setLogoIsPdf(isPdf); };
+                      reader.onload = () => setLogoPreview(typeof reader.result === "string" ? reader.result : "");
                       reader.onerror = () => setNotice("Could not read this file. Try another one.");
                       reader.readAsDataURL(file);
                     }} />
                   </label>
-                  <small className="field-help">Optional · JPEG, PNG or PDF · max 2 MB</small>
-                  {logoPreview && <button type="button" className="logo-remove" onClick={() => { setLogoPreview(""); setLogoIsPdf(false); }}>Remove file</button>}
+                  <small className="field-help">Optional · JPG, JPEG or PNG · max 2 MB</small>
+                  {logoPreview && <button type="button" className="logo-remove" onClick={() => setLogoPreview("")}>Remove file</button>}
                 </div>
               </div>
               <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /><small className="field-help">The public JSON must contain an image field, for example: {'{"name":"My Token","image":"ipfs://.../logo.png"}'}.</small></label>
@@ -708,7 +703,7 @@ export default function App() {
           <div className="section-head"><div><div className="eyebrow">04 / YOUR PROJECTS</div><h2>Launch workspace</h2><p>Saved locally and reconciled on-chain launches.</p></div><span className="count">{tokens.length.toString().padStart(2, "0")} ITEMS · {deployedCount} DEPLOYED</span></div>
           {tokens.length === 0 ? <div className="empty"><div className="empty-icon">◇</div><strong>No launches yet</strong><p>Your saved token drafts will appear here.</p></div> : <div className="token-list">
             {tokens.map(item => <div className="token" key={item.id}>
-              <div className="token-icon">{item.imageIsPdf ? <span className="pdf-file-mark">PDF</span> : item.imageDataUrl || tokenImages[item.metadataURI] ? <img src={item.imageDataUrl || tokenImages[item.metadataURI]} alt={`${item.name} logo`} loading="lazy" /> : item.symbol.slice(0, 1)}</div>
+              <div className="token-icon">{item.imageDataUrl || tokenImages[item.metadataURI] ? <img src={item.imageDataUrl || tokenImages[item.metadataURI]} alt={`${item.name} logo`} loading="lazy" /> : item.symbol.slice(0, 1)}</div>
               <div className="token-info"><strong>{item.name} <small>${item.symbol}</small></strong><p>{item.description || "No description added"}</p><code>{item.creator}</code>
                 {item.token && <p><small>Token: </small><code>{item.token}</code></p>}
                 {item.curve && <p><small>Curve: </small><code>{item.curve}</code></p>}
