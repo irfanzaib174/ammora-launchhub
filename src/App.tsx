@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createPublicClient, createWalletClient, custom, defineChain, formatEther, http,
-  type Address, type Hex
+  parseEther, type Address, type Hex
 } from "viem";
+import { sepolia } from "viem/chains";
+import { publicActionsL1, publicActionsL2, walletActionsL1, getL2TransactionHashes } from "viem/op-stack";
 import {
   AmmoraDataApiClient,
   buildCreateAmmoraV4Launch,
@@ -28,6 +30,8 @@ const chain = defineChain({
   rpcUrls: { default: { http: [RPC_URL] } }
 });
 const publicClient = createPublicClient({ chain, transport: http(RPC_URL, { retryCount: 1 }) });
+const bridgeL1PublicClient = createPublicClient({ chain: sepolia, transport: http() }).extend(publicActionsL1());
+const bridgeL2PublicClient = publicClient.extend(publicActionsL2());
 const STORAGE_KEY = "ammora-launchhub:v2";
 const DATA_API_URL = "https://ammora-giwa-sepolia-data.fly.dev";
 declare global {
@@ -113,6 +117,11 @@ export default function App() {
   const [liveError, setLiveError] = useState("");
   const [liveLoaded, setLiveLoaded] = useState(false);
   const [tokenImages, setTokenImages] = useState<Record<string, string>>({});
+  const [bridgeAmount, setBridgeAmount] = useState("0.01");
+  const [bridgeBalance, setBridgeBalance] = useState("—");
+  const [bridgeStatus, setBridgeStatus] = useState("Connect Rabby to check your Sepolia ETH balance.");
+  const [bridgeBusy, setBridgeBusy] = useState(false);
+  const [bridgeTx, setBridgeTx] = useState("");
 
   const walletReady = Boolean(account && walletChain === CHAIN_ID);
 
@@ -189,6 +198,74 @@ export default function App() {
       });
     return () => { cancelled = true; };
   }, [account]);
+
+  const refreshBridgeBalance = useCallback(async () => {
+    if (!account) { setBridgeBalance("—"); return; }
+    try {
+      const value = await bridgeL1PublicClient.getBalance({ address: account });
+      setBridgeBalance(formatEther(value) + " ETH");
+    } catch {
+      setBridgeBalance("Unavailable");
+    }
+  }, [account]);
+
+  useEffect(() => { void refreshBridgeBalance(); }, [refreshBridgeBalance]);
+
+  const bridgeETH = async () => {
+    if (!window.ethereum || !account) {
+      setBridgeStatus("Connect Rabby wallet first.");
+      return;
+    }
+    if (!/^\\d+(\\.\\d{1,18})?$/.test(bridgeAmount) || Number(bridgeAmount) <= 0) {
+      setBridgeStatus("Enter a valid ETH amount greater than zero.");
+      return;
+    }
+    if (bridgeBusy) return;
+    setBridgeBusy(true);
+    setBridgeTx("");
+    try {
+      const amount = parseEther(bridgeAmount);
+      const balanceOnL1 = await bridgeL1PublicClient.getBalance({ address: account });
+      const gasReserve = parseEther("0.002");
+      if (balanceOnL1 <= amount || balanceOnL1 - amount < gasReserve) {
+        throw new Error("Keep at least 0.002 Sepolia ETH for Ethereum network gas. Reduce the bridge amount.");
+      }
+      setBridgeStatus("Switching Rabby to Ethereum Sepolia…");
+      const currentChain = Number.parseInt(await window.ethereum.request({ method: "eth_chainId" }), 16);
+      if (currentChain !== 11155111) {
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] });
+      }
+      setWalletChain(11155111);
+      setBridgeStatus("Preparing the official GIWA deposit transaction…");
+      const depositArgs = await bridgeL2PublicClient.buildDepositTransaction({ mint: amount, to: account });
+      const walletClient = createWalletClient({
+        account,
+        chain: sepolia,
+        transport: custom(window.ethereum)
+      }).extend(walletActionsL1());
+      setBridgeStatus("Please review and confirm the Sepolia deposit in Rabby.");
+      const depositHash = await walletClient.depositTransaction(depositArgs);
+      setBridgeTx(depositHash);
+      setBridgeStatus("Sepolia transaction submitted. Waiting for L1 confirmation…");
+      const receipt = await bridgeL1PublicClient.waitForTransactionReceipt({ hash: depositHash });
+      const [l2Hash] = getL2TransactionHashes(receipt);
+      if (!l2Hash) throw new Error("L1 deposit confirmed, but the GIWA transaction hash could not be derived. Keep the L1 transaction hash for tracking.");
+      setBridgeStatus("L1 confirmed. Waiting for GIWA Sepolia to credit your ETH (usually around 1–3 minutes)…");
+      await publicClient.waitForTransactionReceipt({ hash: l2Hash, timeout: 300000, pollingInterval: 3000 });
+      setBridgeStatus("Bridge complete! Your ETH is now on GIWA Sepolia.");
+      await refreshBridgeBalance();
+      try {
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
+        setWalletChain(CHAIN_ID);
+      } catch {
+        setBridgeStatus("Bridge complete! Switch Rabby back to GIWA Sepolia (Chain ID 91342) to use LaunchHub.");
+      }
+    } catch (error) {
+      setBridgeStatus(getError(error));
+    } finally {
+      setBridgeBusy(false);
+    }
+  };
 
   const connect = async () => {
     try {
@@ -476,7 +553,7 @@ export default function App() {
     <div className="app">
       <header>
         <a className="brand" href="#"><span className="logo">A</span><span>AMMORA<span className="muted"> / LAUNCHHUB</span></span></a>
-        <nav><a href="#launch">Launch</a><a href="#live-launches">Live launches</a><a href="#markets">My launches</a><a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">SDK docs ↗</a></nav>
+        <nav><a href="#bridge">Bridge ETH</a><a href="#launch">Launch</a><a href="#live-launches">Live launches</a><a href="#markets">My launches</a><a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">SDK docs ↗</a></nav>
         <div className="wallet-group"><button className="wallet" onClick={connect}>{account ? short(account) : "Connect wallet"}</button>{account && <button className="wallet-disconnect" onClick={() => void disconnect()} title="Disconnect wallet">Disconnect</button>}</div>
       </header>
 
@@ -494,6 +571,21 @@ export default function App() {
           <div><small>SDK PACKAGE</small><strong>@ammora-protocol/sdk</strong></div>
           <div><small>SDK VERSION</small><strong>0.3.9</strong></div>
           <div><small>YOUR BALANCE</small><strong>{balance}</strong>{balanceError && <small className="error">{balanceError}</small>}</div>
+        </section>
+
+        <section className="workspace bridge-workspace" id="bridge">
+          <div className="section-head"><div><div className="eyebrow">01 / CROSS-CHAIN</div><h2>Bridge ETH to GIWA</h2><p>Move Sepolia ETH to GIWA Sepolia using GIWA’s canonical OP Stack deposit flow.</p></div><span className="status">● NATIVE BRIDGE</span></div>
+          <div className="bridge-layout">
+            <div className="panel bridge-panel">
+              <div className="bridge-route"><div className="bridge-network"><span className="network-mark">Ξ</span><span><small>FROM NETWORK</small><strong>Ethereum Sepolia</strong><em>Chain ID 11155111</em></span></div><div className="bridge-arrow">→</div><div className="bridge-network"><span className="network-mark giwa-mark">G</span><span><small>TO NETWORK</small><strong>GIWA Sepolia</strong><em>Chain ID 91342</em></span></div></div>
+              <label className="bridge-amount-label">AMOUNT TO BRIDGE<input value={bridgeAmount} onChange={event => setBridgeAmount(event.target.value)} inputMode="decimal" placeholder="0.01" disabled={bridgeBusy}/><small>Available on Sepolia: <b>{bridgeBalance}</b></small></label>
+              <div className="bridge-presets"><button type="button" onClick={() => setBridgeAmount("0.005")} disabled={bridgeBusy}>0.005 ETH</button><button type="button" onClick={() => setBridgeAmount("0.01")} disabled={bridgeBusy}>0.01 ETH</button><button type="button" onClick={() => setBridgeAmount("0.05")} disabled={bridgeBusy}>0.05 ETH</button></div>
+              <button className="primary bridge-submit" onClick={() => void bridgeETH()} disabled={bridgeBusy || !account}>{bridgeBusy ? "Bridging…" : "Bridge ETH to GIWA"} <span>↗</span></button>
+              <div className="bridge-status"><span className={bridgeBusy ? "bridge-pulse" : "bridge-dot"}/><p>{bridgeStatus}</p></div>
+              {bridgeTx && <p className="bridge-hash">L1 transaction: <a href={`https://sepolia.etherscan.io/tx/${bridgeTx}`} target="_blank" rel="noreferrer">{short(bridgeTx)} · View on Etherscan ↗</a></p>}
+            </div>
+            <aside className="bridge-aside"><div className="eyebrow">HOW IT WORKS</div><h3>Your ETH, across networks.</h3><ol><li><b>Connect Rabby</b><span>Use the same wallet address on both networks.</span></li><li><b>Enter an amount</b><span>Keep extra Sepolia ETH for the L1 gas fee.</span></li><li><b>Confirm in Rabby</b><span>The deposit is sent through GIWA’s official OP Stack bridge flow.</span></li><li><b>Receive on GIWA</b><span>Deposits usually arrive in around 1–3 minutes.</span></li></ol><p className="bridge-warning">This bridges ETH; it does not swap ETH into an AMM token. Never share your seed phrase or private key.</p><a href="https://sepolia-bridge.giwa.io/" target="_blank" rel="noreferrer">Open official GIWA bridge ↗</a></aside>
+          </div>
         </section>
 
         <section className="workspace" id="launch">
