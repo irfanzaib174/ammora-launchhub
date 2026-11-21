@@ -1,19 +1,36 @@
-# Ammora LaunchHub — upgraded starter
+# Ammora LaunchHub
 
 Community-built testnet launchpad for **GIWA Sepolia (chain ID 91342)** using `@ammora-protocol/sdk@0.3.9`.
 
-## Improvements
+## Features
 
-- Correct GIWA Sepolia chain ID switch (`0x1652e`).
-- Uses the SDK deployment catalog RPC rather than the old hard-coded RPC URL.
-- Reads native ETH balance from the GIWA public RPC.
-- Saves launch drafts and verified launch records in browser `localStorage`.
-- Reads an enabled V4 Config using SDK `getAmmoraV4ConfigAtBlock`.
-- Checks the selected chain and V4 core contract addresses.
-- Builds the launch transaction using `buildCreateAmmoraV4Launch`.
-- Simulates before asking the connected wallet to sign.
-- Waits for 13 confirmations and reconciles Config hash, token code and curve code.
-- Never stores private keys.
+- Rabby / injected-wallet connection and GIWA Sepolia network switching.
+- Ammora ETH → $tAMM swap entry linking to the official Ammora swap experience.
+- Native **Ethereum Sepolia → GIWA Sepolia ETH bridge** using GIWA's canonical OP Stack deposit flow.
+- Sepolia balance lookup, amount presets, wallet confirmation, L1 and L2 transaction tracking.
+- Token launch drafts with public metadata JSON URI and token logo display from metadata.
+- Live GIWA Sepolia launches from Ammora's Data API.
+- Ammora V4 Config review and runtime bytecode verification before token issuance.
+- Launch simulation, wallet signing, confirmation and receipt reconciliation.
+- No private keys or seed phrases are requested or stored.
+
+## Bridge route
+
+- From: Ethereum Sepolia, chain ID `11155111`
+- To: GIWA Sepolia, chain ID `91342`
+- Uses GIWA's documented OP Stack deposit flow via viem `^2.51.0`.
+- The bridge transfers ETH between testnets. It does **not** swap ETH into $tAMM.
+- Keep additional Sepolia ETH for L1 gas and test with a small amount first.
+- Official bridge fallback: https://sepolia-bridge.giwa.io/
+
+## Launch safety
+
+- Config #6 is quarantined for new launches and is blocked by the UI. Do not use it.
+- A separately reviewed and qualified Config ID must be obtained from Ammora before issuing.
+- The app does not create or qualify Configs.
+- Runtime pin verification and enabled Config review are required before issuance.
+- This is a community-built testnet interface, not an official Ammora product. Do not use real funds or production mainnet.
+- Token metadata must be hosted at a public HTTPS or IPFS URI. The JSON should include an `image` field for the token logo.
 
 ## Install and build
 
@@ -25,18 +42,8 @@ npm run build
 npm run dev
 ```
 
-## Important deployment and Config limitations
-
-This is a **testnet starter**, not an official Ammora product.
-
-- The app currently uses an existing Config ID supplied in the UI (default `6`, the documented example template). The Config's immutable fee claimer is not automatically changed to the connected wallet.
-- To operate your own launchpad economics and fee recipients, create and review a new immutable Config from a suitable template using the official SDK workflow before issuing tokens. This frontend does not yet implement the full Config-authoring form.
-- The frontend bundles the reviewed GIWA auto-route runtime-pin snapshot from Ammora's public examples and checks its identity against the SDK deployment. Before issuance it verifies runtime hashes at a finalized block, then verifies V4 core addresses. If any check fails, issuance stays locked. Do not use real funds or production mainnet.
-- The metadata URI is a placeholder URL. Before public token issuance, replace it with a real, immutable token metadata URI (for example, a properly hosted JSON file).
-- Browser localStorage is device/browser-specific. It is not cloud backup. Clearing browser data removes saved drafts; deployed tokens remain on-chain and can be recovered from transaction receipts.
-
 ## Official references
 
-- https://docs.ammora.org/guides/sdk-quickstart
+- https://docs.giwa.io/giwa-chain/en/get-started/bridging/eth
 - https://docs.ammora.org/guides/launchpad
-- https://docs.ammora.org/examples
+- https://docs.ammora.org/guides/sdk-quickstart
