@@ -97,7 +97,7 @@ export default function App() {
   const [symbol, setSymbol] = useState("");
   const [description, setDescription] = useState("");
   const [metadataURI, setMetadataURI] = useState("");
-  const [configId, setConfigId] = useState("6");
+  const [configId, setConfigId] = useState("");
   const [config, setConfig] = useState<ConfigSummary | null>(null);
   const [configBusy, setConfigBusy] = useState(false);
   const [tokens, setTokens] = useState<LaunchItem[]>([]);
@@ -272,6 +272,7 @@ export default function App() {
     try {
       const id = configId.trim();
       if (!/^\d+$/.test(id)) throw new Error("Enter a numeric Config ID.");
+      if (id === "6") throw new Error("Config #6 is quarantined for new launches. Do not use it. Obtain a separately reviewed and qualified Config ID from Ammora first.");
       const chainId = await publicClient.getChainId();
       if (chainId !== CHAIN_ID) throw new Error(`The selected RPC returned chain ${chainId}, not ${CHAIN_ID}.`);
       const blockNumber = await publicClient.getBlockNumber();
@@ -344,6 +345,7 @@ export default function App() {
       return;
     }
     if (!runtimeVerified) { setNotice("Verify the official GIWA runtime pins before issuing."); return; }
+    if (configId.trim() === "6") { setNotice("Config #6 is quarantined for new launches. Use a separately reviewed and qualified Config ID."); return; }
     if (!config || !config.enabled || config.id !== configId.trim()) {
       setNotice("Read and verify an enabled Config before issuing.");
       return;
@@ -516,7 +518,7 @@ export default function App() {
             <p className="lead">{deploymentStatus}</p>
             <button className="secondary-button" disabled={runtimeBusy} onClick={() => void verifyDeployment().catch(error => setNotice(getError(error)))}>{runtimeBusy ? "Verifying official runtime pins…" : runtimeVerified ? "Re-verify deployment" : "Verify official deployment"}</button>
             {runtimeError && <p className="error">{runtimeError}</p>}
-            <label>Config ID<input value={configId} onChange={event => { setConfigId(event.target.value); setConfig(null); setConfigError(""); }} inputMode="numeric" placeholder="e.g. 6"/></label>
+            <label>Config ID<input value={configId} onChange={event => { setConfigId(event.target.value); setConfig(null); setConfigError(""); }} inputMode="numeric" placeholder="Enter qualified Config ID (not 6)"/></label>
             <button className="secondary-button" disabled={configBusy} onClick={checkConfig}>{configBusy ? "Checking…" : "Read & verify Config"}</button>
             {configError && <p className="error">{configError}</p>}
             {config && <div className="config-result">
@@ -526,7 +528,7 @@ export default function App() {
               <p><small>Fee claimer in this Config</small><code>{config.feeClaimer}</code></p>
               <p><small>Token decimals</small><b>{config.tokenDecimals}</b></p>
               <p><small>Pool creation fee</small><b>{config.poolCreationFee} wei</b></p>
-              {config.id === "6" && <p className="warning">Config #6 is the documented example template. Its fee claimer is defined by that Config and may not be your wallet. Review it before using it.</p>}
+              {config.id === "6" && <p className="warning">Config #6 is quarantined for new launches. Do not use it.</p>}
             </div>}
           </div>
         </section>
@@ -574,7 +576,7 @@ export default function App() {
           <div className="notice-icon">i</div>
           <div><strong>Transaction safety & important limits</strong>
             <p>The app uses the official SDK deployment catalog, discovers indexed launches through AmmoraDataApiClient, reads the selected Config, verifies the V4 core addresses, simulates the launch call, asks your wallet to sign, waits for 13 confirmations and checks the receipt, Config hash, token code and curve code. Never share your seed phrase or private key.</p>
-            <p><b>Important:</b> Config #6 is a documented template, not a personal launchpad Config. Its fee recipient is fixed by that Config. For a platform-owned Config, first create a new immutable Config with reviewed recipients and economics. The browser flow here does not create a new Config. Runtime-bytecode pin verification is available above. Run “Verify official deployment” first; token issuance stays locked until that check and an enabled Config review both pass.</p>
+            <p><b>Important:</b> Config #6 is quarantined for new launches and this app blocks it. Obtain a separately reviewed and qualified Config before issuing any token. This browser flow does not create or qualify Configs. Runtime-bytecode pin verification is available above. Run “Verify official deployment” first; token issuance stays locked until that check and an enabled Config review both pass.</p>
             <a href="https://docs.ammora.org/guides/launchpad" target="_blank" rel="noreferrer">Official launchpad guide ↗</a>
           </div>
         </section>
