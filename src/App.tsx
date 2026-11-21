@@ -217,7 +217,7 @@ export default function App() {
       setBridgeStatus("Connect Rabby wallet first.");
       return;
     }
-    if (!/^\\d+(\\.\\d{1,18})?$/.test(bridgeAmount) || Number(bridgeAmount) <= 0) {
+    if (!/^\d+(\.\d{1,18})?$/.test(bridgeAmount) || Number(bridgeAmount) <= 0) {
       setBridgeStatus("Enter a valid ETH amount greater than zero.");
       return;
     }
