@@ -48,6 +48,7 @@ type LaunchItem = {
   symbol: string;
   description: string;
   metadataURI: string;
+  imageDataUrl?: string;
   creator: string;
   status: "Draft · not deployed" | "Deployed";
   configId?: string;
@@ -106,6 +107,7 @@ export default function App() {
   const [symbol, setSymbol] = useState("");
   const [description, setDescription] = useState("");
   const [metadataURI, setMetadataURI] = useState("");
+  const [logoPreview, setLogoPreview] = useState("");
   const [configId, setConfigId] = useState("");
   const [config, setConfig] = useState<ConfigSummary | null>(null);
   const [configBusy, setConfigBusy] = useState(false);
@@ -404,6 +406,7 @@ export default function App() {
       symbol: symbol.trim().toUpperCase(),
       description: description.trim(),
       metadataURI: metadataURI.trim(),
+      imageDataUrl: logoPreview,
       creator: account || "Wallet not connected",
       status: "Draft · not deployed",
       createdAt: Date.now()
@@ -413,6 +416,7 @@ export default function App() {
     setSymbol("");
     setDescription("");
     setMetadataURI("");
+    setLogoPreview("");
     setNotice("Draft saved in this browser. No blockchain transaction was sent.");
   };
 
@@ -624,6 +628,23 @@ export default function App() {
                 <label>Token symbol<input value={symbol} onChange={event => setSymbol(event.target.value)} placeholder="e.g. AMORA" required maxLength={10}/></label>
               </div>
               <label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="What is your project about?" rows={3} maxLength={240}/></label>
+              <div className="logo-upload-row">
+                <div className="logo-upload-preview">{logoPreview ? <img src={logoPreview} alt="Token logo preview" /> : <span>+</span>}</div>
+                <div className="logo-upload-controls">
+                  <label className="logo-upload-label">Token logo <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith("image/")) { setNotice("Choose a valid image file."); event.target.value = ""; return; }
+                    if (file.size > 2 * 1024 * 1024) { setNotice("Token logo must be 2 MB or smaller."); event.target.value = ""; return; }
+                    const reader = new FileReader();
+                    reader.onload = () => setLogoPreview(typeof reader.result === "string" ? reader.result : "");
+                    reader.onerror = () => setNotice("Could not read this image. Try another file.");
+                    reader.readAsDataURL(file);
+                  }} /></label>
+                  <small className="field-help">Optional · PNG, JPG, WEBP or GIF · max 2 MB</small>
+                  {logoPreview && <button type="button" className="logo-remove" onClick={() => setLogoPreview("")}>Remove image</button>}
+                </div>
+              </div>
               <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /><small className="field-help">The public JSON must contain an image field, for example: {'{"name":"My Token","image":"ipfs://.../logo.png"}'}.</small></label>
               <div className="form-bottom"><span>Drafts are saved in this browser. Saving a draft does not deploy a token.</span><button className="primary" type="submit">Save launch draft <span>→</span></button></div>
             </form>
@@ -680,7 +701,7 @@ export default function App() {
           <div className="section-head"><div><div className="eyebrow">04 / YOUR PROJECTS</div><h2>Launch workspace</h2><p>Saved locally and reconciled on-chain launches.</p></div><span className="count">{tokens.length.toString().padStart(2, "0")} ITEMS · {deployedCount} DEPLOYED</span></div>
           {tokens.length === 0 ? <div className="empty"><div className="empty-icon">◇</div><strong>No launches yet</strong><p>Your saved token drafts will appear here.</p></div> : <div className="token-list">
             {tokens.map(item => <div className="token" key={item.id}>
-              <div className="token-icon">{tokenImages[item.metadataURI] ? <img src={tokenImages[item.metadataURI]} alt={`${item.name} logo`} loading="lazy" /> : item.symbol.slice(0, 1)}</div>
+              <div className="token-icon">{item.imageDataUrl || tokenImages[item.metadataURI] ? <img src={item.imageDataUrl || tokenImages[item.metadataURI]} alt={`${item.name} logo`} loading="lazy" /> : item.symbol.slice(0, 1)}</div>
               <div className="token-info"><strong>{item.name} <small>${item.symbol}</small></strong><p>{item.description || "No description added"}</p><code>{item.creator}</code>
                 {item.token && <p><small>Token: </small><code>{item.token}</code></p>}
                 {item.curve && <p><small>Curve: </small><code>{item.curve}</code></p>}
