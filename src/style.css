@@ -150,3 +150,11 @@ footer{display:flex;justify-content:space-between;border-top:1px solid var(--lin
 .bridge-aside>a{font-size:10px;font-weight:700}
 @media(max-width:850px){.bridge-layout{grid-template-columns:1fr}}
 @media(max-width:560px){.bridge-route{grid-template-columns:1fr;gap:15px}.bridge-arrow{transform:rotate(90deg);text-align:left;padding-left:10px}.bridge-network strong{font-size:11px}.bridge-panel,.bridge-aside{padding:18px}}
+
+/* Full-width, aligned bridge safety notice */
+.bridge-safety-note{grid-column:1/-1;display:flex;align-items:center;gap:14px;width:100%;min-width:0;margin:0;padding:17px 20px;border:1px solid #e8c98a55;border-radius:12px;background:linear-gradient(105deg,#302a1d,#211f1a);}
+.bridge-safety-icon{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border:1px solid #e8c98a99;border-radius:50%;color:#f0d49c;font:700 15px 'DM Mono',monospace;}
+.bridge-safety-note>div{min-width:0;display:grid;gap:5px;}
+.bridge-safety-note strong{font-size:11px;color:#f0d49c;}
+.bridge-safety-note p,.bridge-safety-note small{margin:0;color:#d0c3a4;font-size:10px;line-height:1.65;overflow-wrap:anywhere;}
+@media(max-width:560px){.bridge-safety-note{align-items:flex-start;padding:14px;}}
