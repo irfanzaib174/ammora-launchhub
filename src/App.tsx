@@ -27,7 +27,12 @@ const chain = defineChain({
   id: CHAIN_ID,
   name: "GIWA Sepolia",
   nativeCurrency: DEPLOYMENT.chain.nativeCurrency,
-  rpcUrls: { default: { http: [RPC_URL] } }
+  rpcUrls: { default: { http: [RPC_URL] } },
+  contracts: {
+    portal: {
+      [sepolia.id]: { address: "0x956962C34687A954e611A83619ABaA37Ce6bC78A" }
+    }
+  }
 });
 const publicClient = createPublicClient({ chain, transport: http(RPC_URL, { retryCount: 1 }) });
 const bridgeL1PublicClient = createPublicClient({ chain: sepolia, transport: http() }).extend(publicActionsL1());
