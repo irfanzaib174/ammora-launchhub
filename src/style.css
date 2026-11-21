@@ -113,3 +113,40 @@ footer{display:flex;justify-content:space-between;border-top:1px solid var(--lin
 .swap-aside>a{font-size:10px;color:var(--mint);text-decoration:none;font-weight:700}
 @media(max-width:850px){.swap-layout{grid-template-columns:1fr}}
 @media(max-width:560px){.swap-panel,.swap-aside{padding:18px}}
+
+
+.bridge-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.65fr);gap:18px;align-items:stretch}
+.bridge-panel{padding:25px}
+.bridge-route{display:grid;grid-template-columns:1fr 34px 1fr;align-items:center;gap:12px;padding:4px 0 24px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.bridge-network{display:flex;align-items:center;gap:12px;min-width:0}
+.network-mark{width:39px;height:39px;border-radius:13px;background:#202c42;color:#c8d8ff;display:grid;place-items:center;font-size:22px;font-weight:800;flex-shrink:0}
+.giwa-mark{background:#173a37;color:var(--mint);font:800 16px 'DM Mono'}
+.bridge-network span:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.bridge-network small,.bridge-amount-label{font:9px 'DM Mono';letter-spacing:.1em;color:#829c9d}
+.bridge-network strong{font-size:12px;color:#edf8f5}
+.bridge-network em{font:9px 'DM Mono';font-style:normal;color:#7d9697}
+.bridge-arrow{text-align:center;color:var(--mint);font-size:21px}
+.bridge-amount-label{display:flex;flex-direction:column;gap:10px;margin:0 0 13px}
+.bridge-amount-label input{font:700 23px 'DM Mono';padding:17px}
+.bridge-amount-label small{letter-spacing:0;text-transform:none;font:10px Manrope;color:#8da6a6}
+.bridge-amount-label small b{color:var(--mint);font-weight:700}
+.bridge-presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.bridge-presets button{border:1px solid var(--line);background:#0a1a1d;color:#a9c5c1;border-radius:8px;padding:8px 12px;font:10px 'DM Mono';cursor:pointer}
+.bridge-presets button:hover{border-color:#70e4bf;color:var(--mint)}
+.bridge-submit{width:100%;padding:16px}
+.bridge-status{display:flex;gap:10px;align-items:flex-start;margin-top:17px;padding:13px;background:#08191b;border:1px solid var(--line);border-radius:9px}
+.bridge-status p{margin:0;color:#a5bdb9;font-size:10px;line-height:1.6}
+.bridge-dot,.bridge-pulse{width:7px;height:7px;border-radius:50%;background:#7b9995;flex-shrink:0;margin-top:4px}
+.bridge-pulse{background:var(--mint);box-shadow:0 0 0 5px #77f0c21a}
+.bridge-hash{font-size:10px;color:#91aaa8;overflow-wrap:anywhere}
+.bridge-hash a,.bridge-aside>a{color:var(--mint);text-decoration:none}
+.bridge-aside{border:1px solid var(--line);border-radius:15px;padding:25px;background:linear-gradient(150deg,#10272b,#0b1b20)}
+.bridge-aside h3{font-size:21px;letter-spacing:-.04em;margin:13px 0 20px}
+.bridge-aside ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:17px}
+.bridge-aside li{display:flex;flex-direction:column;gap:4px;border-left:1px solid #5edbb555;padding-left:13px}
+.bridge-aside li b{font-size:11px;color:#e5f5ef}
+.bridge-aside li span{font-size:10px;color:#8da6a4;line-height:1.5}
+.bridge-warning{font-size:10px;line-height:1.7;color:#e8c98d;background:#322b1d;border:1px solid #e8c98a33;border-radius:8px;padding:11px;margin:20px 0 14px}
+.bridge-aside>a{font-size:10px;font-weight:700}
+@media(max-width:850px){.bridge-layout{grid-template-columns:1fr}}
+@media(max-width:560px){.bridge-route{grid-template-columns:1fr;gap:15px}.bridge-arrow{transform:rotate(90deg);text-align:left;padding-left:10px}.bridge-network strong{font-size:11px}.bridge-panel,.bridge-aside{padding:18px}}
