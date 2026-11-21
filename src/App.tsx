@@ -580,15 +580,20 @@ export default function App() {
         <section className="workspace" id="swap">
           <div className="section-head"><div><div className="eyebrow">01 / TOKEN EXCHANGE</div><h2>Ammora Swap</h2><p>Open the official Ammora Season 2 swap to exchange GIWA Sepolia ETH for $tAMM.</p></div><span className="status">● GIWA SEPOLIA</span></div>
           <div className="swap-layout">
-            <div className="panel swap-panel">
-              <div className="swap-route">
-                <div className="swap-asset"><span className="swap-coin eth-coin">Ξ</span><div><small>YOU PAY</small><strong>ETH</strong><em>GIWA Sepolia · Chain 91342</em></div></div>
-                <div className="swap-arrow">↓</div>
-                <div className="swap-asset"><span className="swap-coin tamm-coin">A</span><div><small>YOU RECEIVE</small><strong>$tAMM</strong><em>Ammora testnet token</em></div></div>
+            <div className="panel swap-panel swap-embed-panel">
+              <div className="swap-embed-heading"><div><small>OFFICIAL AMMORA SEASON 2</small><strong>Buy / Sell $tAMM</strong></div><span className="status">● GIWA SEPOLIA</span></div>
+              <div className="swap-embed-frame">
+                <iframe
+                  title="Official Ammora Season 2 swap"
+                  src="https://ammora.org/waitlist#swap"
+                  loading="lazy"
+                  allow="clipboard-read; clipboard-write; publickey-credentials-get; publickey-credentials-create"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
               </div>
-              <div className="swap-wallet-note"><span className="swap-indicator"/><p>Use Rabby Wallet on GIWA Sepolia. Connect the same wallet on the official Ammora page before swapping.</p></div>
-              <a className="primary swap-open" href="https://ammora.org/waitlist?topic=routing" target="_blank" rel="noreferrer">Open Official Ammora Swap <span>↗</span></a>
-              <p className="swap-footnote">The official Ammora app handles the live quote, token route, slippage and wallet transaction. LaunchHub does not ask for your seed phrase or private key.</p>
+              <div className="swap-wallet-note"><span className="swap-indicator"/><p>Official Ammora app is embedded here. Connect Rabby inside the embedded page and confirm that it shows GIWA Sepolia (Chain ID 91342) before swapping.</p></div>
+              <a className="primary swap-open" href="https://ammora.org/waitlist#swap" target="_blank" rel="noreferrer">Open Ammora in a new tab <span>↗</span></a>
+              <p className="swap-footnote">Swap quotes, token routing, slippage and wallet approvals are handled by Ammora’s official app. If the embedded page is blocked by browser security settings, use the new-tab link above. Never share your seed phrase or private key.</p>
             </div>
             <aside className="swap-aside"><div className="eyebrow">BEFORE YOU SWAP</div><h3>Quick checklist</h3><ol><li><b>Connect Rabby</b><span>Choose your wallet on Ammora’s official page.</span></li><li><b>Select GIWA Sepolia</b><span>Network ID must be 91342.</span></li><li><b>Open Swap</b><span>Choose ETH as From and $tAMM as To.</span></li><li><b>Review the quote</b><span>Check output, slippage and gas in Rabby before confirming.</span></li></ol><p className="swap-warning">$tAMM is a GIWA Sepolia testnet token. Ammora currently labels conversion to mainnet $AMM as planned—not available yet.</p><a href="https://docs.ammora.org/" target="_blank" rel="noreferrer">Ammora official documentation ↗</a></aside>
           </div>
