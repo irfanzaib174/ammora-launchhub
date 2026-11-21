@@ -505,7 +505,7 @@ export default function App() {
                 <label>Token symbol<input value={symbol} onChange={event => setSymbol(event.target.value)} placeholder="e.g. AMORA" required maxLength={10}/></label>
               </div>
               <label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} placeholder="What is your project about?" rows={3} maxLength={240}/></label>
-              <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /><small className="field-help">The public JSON must contain an image field, for example: {"name":"My Token","image":"ipfs://.../logo.png"}.</small></label>
+              <label>Token metadata JSON URI<input value={metadataURI} onChange={event => setMetadataURI(event.target.value)} placeholder="ipfs://... or https://your-host/metadata.json" required /><small className="field-help">The public JSON must contain an image field, for example: {'{"name":"My Token","image":"ipfs://.../logo.png"}'}.</small></label>
               <div className="form-bottom"><span>Drafts are saved in this browser. Saving a draft does not deploy a token.</span><button className="primary" type="submit">Save launch draft <span>→</span></button></div>
             </form>
           </div>
